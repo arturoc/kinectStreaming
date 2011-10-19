@@ -1,0 +1,14 @@
+bin/cc
+bin/classes
+bin/libs
+bin/kinectStream
+bin/kinectStream_debug
+obj
+gen
+local.properties
+.settings
+.externalToolBuilders
+libOFAndroidApp.so
+*.apk
+*.ap_
+*.dex
