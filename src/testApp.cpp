@@ -7,7 +7,12 @@ void testApp::setup(){
 	ofSetVerticalSync(true);
 	ofSetLogLevel(OF_LOG_VERBOSE);
 
-	settings.loadFile("settings.xml");
+	if(settings.loadFile("settings.xml")){
+		ofLogVerbose() << "settings loaded ok";
+	}else{
+		ofLogError() << "error loading settings";
+	}
+
 	int quality = settings.getValue("settings:quality",48);
 	int keyframe_freq = settings.getValue("settings:keyframe-freq",64);
 	bool keyframe_auto = settings.getValue("settings:keyframe-auto",false);
@@ -16,7 +21,7 @@ void testApp::setup(){
 	string mount = settings.getValue("settings:mount","kinect.ogg");
 	string passwd = settings.getValue("settings:passwd","myd9v");
 	int width = settings.getValue("settings:width",320);
-	int height = settings.getValue("settings:port",240);
+	int height = settings.getValue("settings:height",240);
 
 
 	string pipeline = ofVAArgsToString("appsrc  name=video_src is-live=true do-timestamp=true ! "

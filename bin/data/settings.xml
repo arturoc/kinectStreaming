@@ -1,11 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <settings>
-<quality>48</quality>
-<keyframe-freq>64</keyframe-freq>
-<keyframe-auto>false</keyframe-auto>
-<server>giss.tv</server>
-<port>8000</port>
-<mount>kinect.ogg</mount>
-<passwd>myd9v</passwd>
-<width>320</width>
-<height>240</height>
+	<quality>48</quality>
+	<keyframe-freq>64</keyframe-freq>
+	<keyframe-auto>false</keyframe-auto>
+	<server>giss.tv</server>
+	<port>8001</port>
+	<mount>kinect.ogg</mount>
+	<passwd>myd9v</passwd>
+	<width>320</width>
+	<height>240</height>
 </settings>
