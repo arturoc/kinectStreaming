@@ -3,8 +3,8 @@
 	<quality>48</quality>
 	<keyframe-freq>64</keyframe-freq>
 	<keyframe-auto>false</keyframe-auto>
-	<server>giss.tv</server>
-	<port>8001</port>
+	<server>91.121.134.23</server>
+	<port>8002</port>
 	<mount>kinect.ogg</mount>
 	<passwd>myd9v</passwd>
 	<width>320</width>
