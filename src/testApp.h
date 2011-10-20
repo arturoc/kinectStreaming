@@ -27,5 +27,10 @@ class testApp : public ofBaseApp{
 		GstAppSrc * gstSrc;
 
 		ofxXmlSettings settings;
+		ofPixels pixels;
+		ofPixels depthPixels;
+		ofTexture tex;
+
+		bool sendBrightness;
 
 };
