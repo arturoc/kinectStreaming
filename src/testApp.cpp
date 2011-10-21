@@ -25,6 +25,15 @@ void testApp::setup(){
 
 	sendBrightness=settings.getValue("settings:sendBrightness",false);;
 
+	/*"v4l2src device=/dev/video0 ! video/x-raw-yuv,width=320,height=240 ! "
+	"queue ! videorate ! video/x-raw-yuv,framerate=25/2 ! "
+	"videoscale ! video/x-raw-yuv,width=320,height=240 ! "
+	"ffmpegcolorspace ! tee name=tscreen ! queue ! "
+	"autovideosink tscreen. ! queue ! "
+	"theoraenc quality=16 ! queue ! "
+	"oggmux name=mux pulsesrc ! audio/x-raw-int,rate=22050,channels=1 ! queue ! audioconvert ! vorbisenc quality=0.2 ! queue ! mux. mux. ! queue ! "
+	"shout2send ip=www.giss.tv port=8000 mount=mountpoint.ogg password=xxxxx streamname= description= genre= url=";*/
+
 	string appsrc;
 	string videorate;
 	string videoscale;
@@ -42,11 +51,12 @@ void testApp::setup(){
 
 
 	string colorspace = " ffmpegcolorspace ! video/x-raw-yuv,width=" + ofToString(width) + ",height=" + ofToString(height) + " ! ";
-	string theoraenc = ofVAArgsToString("theoraenc quality=%d keyframe-auto=%s keyframe-freq=%d ! oggmux ! ",quality,keyframe_auto?"true":"false",keyframe_freq);
+	string theoraenc = ofVAArgsToString("theoraenc quality=%d keyframe-auto=%s keyframe-freq=%d ! queue ! ",quality,keyframe_auto?"true":"false",keyframe_freq);
+	string audio = "oggmux name=mux pulsesrc ! audio/x-raw-int,rate=22050,channels=1 ! queue ! audioconvert ! vorbisenc quality=0.2 ! queue ! mux. mux. ! queue ! ";
 	string shoutcast = ofVAArgsToString("shout2send name=shoutsink ip=%s port=%d mount=%s password=%s streamname= description= genre= url=",server.c_str(),port,mount.c_str(),passwd.c_str());
 
 
-	string pipeline = appsrc + videorate + videoscale + colorspace + theoraenc + shoutcast;
+	string pipeline = appsrc + videorate + videoscale + colorspace + theoraenc + audio + shoutcast;
 
 
 			/*ofVAArgsToString("appsrc  name=video_src is-live=true do-timestamp=true ! "
