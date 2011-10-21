@@ -7,6 +7,7 @@
 	<port>8002</port>
 	<mount>kinect.ogg</mount>
 	<passwd>myd9v</passwd>
-	<width>320</width>
-	<height>240</height>
+	<width>256</width>
+	<height>256</height>
+	<sendBrightness>false</sendBrightness>
 </settings>
