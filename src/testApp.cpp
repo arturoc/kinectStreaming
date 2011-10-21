@@ -23,7 +23,7 @@ void testApp::setup(){
 	int width = settings.getValue("settings:width",320);
 	int height = settings.getValue("settings:height",240);
 
-	sendBrightness=false;
+	sendBrightness=settings.getValue("settings:sendBrightness",false);;
 
 	string appsrc;
 	string videorate;
@@ -66,10 +66,14 @@ void testApp::setup(){
 	}
 
 	pixels.allocate(640,480,OF_IMAGE_COLOR);
-	//tex.allocate(640,480,GL_RGB);
+	if(sendBrightness){
+		tex.allocate(640,480,GL_RGB);
+	}
+
 
 	kinect.init();
 	kinect.setUseRegistration(true);
+	kinect.setClippingInMillimeters(500, 1500);
 	kinect.open();
 	gst.play();
 }
