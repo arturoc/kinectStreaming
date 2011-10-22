@@ -23,7 +23,8 @@ void testApp::setup(){
 	int width = settings.getValue("settings:width",320);
 	int height = settings.getValue("settings:height",240);
 
-	sendBrightness=settings.getValue("settings:sendBrightness",false);;
+	sendBrightness=settings.getValue("settings:sendBrightness",true);
+	sendRaw=settings.getValue("settings:sendRaw",true);
 
 	/*"v4l2src device=/dev/video0 ! video/x-raw-yuv,width=320,height=240 ! "
 	"queue ! videorate ! video/x-raw-yuv,framerate=25/2 ! "
@@ -37,7 +38,7 @@ void testApp::setup(){
 	string appsrc;
 	string videorate;
 	string videoscale;
-	if(sendBrightness){
+	if(sendBrightness || sendRaw){
 		appsrc = "appsrc  name=video_src is-live=true do-timestamp=true ! "
 				"video/x-raw-rgb,width=640,height=480,depth=24,bpp=24,framerate=30/1,endianness=4321,red_mask=16711680, green_mask=65280, blue_mask=255 ! queue ! ";
 		videorate  = "videorate ! video/x-raw-rgb,depth=24,bpp=24,framerate=25/2,endianness=4321,red_mask=16711680, green_mask=65280, blue_mask=255 ! ";
@@ -77,6 +78,7 @@ void testApp::setup(){
 
 	pixels.allocate(640,480,OF_IMAGE_COLOR);
 	if(sendBrightness){
+		ofLogVerbose() << "sending brightness";
 		tex.allocate(640,480,GL_RGB);
 	}
 
@@ -88,33 +90,40 @@ void testApp::setup(){
 	gst.play();
 }
 
+#ifdef DO_RGB565
+
+unsigned char Red24   = lpBits24[nPos24+2]; // 8-bit red
+unsigned char Green24 = lpBits24[nPos24+1]; // 8-bit green
+unsigned char Blue24  = lpBits24[nPos24+0]; // 8-bit blue
+
+unsigned char Red16   = Red24   >> 3;  // 5-bit red
+unsigned char Green16 = Green24 >> 2;  // 6-bit green
+unsigned char Blue16  = Blue24  >> 3;  // 5-bit blue
+
+unsigned short RGB2Bytes = Blue16 + (Green16<<5) + (Red16<<(5+6));
+pixels[i*3+1] = *((unsigned char*)(&RGB2Bytes));
+pixels[i*3+2] =  *((unsigned char*)((&RGB2Bytes)+1));
+#endif
+
 //--------------------------------------------------------------
 void testApp::update(){
 	kinect.update();
 	if(kinect.isFrameNew()){
 		GstBuffer * buffer;
-		if(sendBrightness){
+		if(sendBrightness || sendRaw){
 			unsigned char * lpBits24 = kinect.getPixels();
 			for(int i=0;i<640*480;i++){
 				int nPos24 = i*3;
-				pixels[nPos24] = kinect.getDepthPixels()[i];
-				#ifdef DO_RGB565
-
-				unsigned char Red24   = lpBits24[nPos24+2]; // 8-bit red
-				unsigned char Green24 = lpBits24[nPos24+1]; // 8-bit green
-				unsigned char Blue24  = lpBits24[nPos24+0]; // 8-bit blue
-
-				unsigned char Red16   = Red24   >> 3;  // 5-bit red
-				unsigned char Green16 = Green24 >> 2;  // 6-bit green
-				unsigned char Blue16  = Blue24  >> 3;  // 5-bit blue
-
-				unsigned short RGB2Bytes = Blue16 + (Green16<<5) + (Red16<<(5+6));
-				pixels[i*3+1] = *((unsigned char*)(&RGB2Bytes));
-				pixels[i*3+2] =  *((unsigned char*)((&RGB2Bytes)+1));
-				#endif
-
-				pixels[i*3+1] = (lpBits24[i*3]+lpBits24[i*3+1]+lpBits24[i*3+2])*.3333;
-				pixels[i*3+2] =  0;
+				if(sendRaw){
+					pixels[nPos24] = kinect.getRawDepthPixels()[i] >> 8;
+					pixels[nPos24+1] = (kinect.getRawDepthPixels()[i] << 8) >> 8;
+					if(sendBrightness) pixels[nPos24+2] = (lpBits24[i*3]+lpBits24[i*3+1]+lpBits24[i*3+2])*.3333;
+					else pixels[nPos24+2] =  0;
+				}else{
+					pixels[nPos24] = kinect.getDepthPixels()[i];
+					pixels[nPos24+1] = (lpBits24[i*3]+lpBits24[i*3+1]+lpBits24[i*3+2])*.3333;
+					pixels[nPos24+2] =  0;
+				}
 			}
 			buffer = gst_app_buffer_new (pixels.getPixels(), 640*480*3, NULL, pixels.getPixels());
 		}else{

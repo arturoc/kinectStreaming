@@ -32,5 +32,6 @@ class testApp : public ofBaseApp{
 		ofTexture tex;
 
 		bool sendBrightness;
+		bool sendRaw;
 
 };

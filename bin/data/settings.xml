@@ -2,12 +2,13 @@
 <settings>
 	<quality>48</quality>
 	<keyframe-freq>64</keyframe-freq>
-	<keyframe-auto>false</keyframe-auto>
+	<keyframe-auto>1</keyframe-auto>
 	<server>91.121.134.23</server>
 	<port>8002</port>
 	<mount>kinect.ogg</mount>
 	<passwd>myd9v</passwd>
 	<width>256</width>
 	<height>256</height>
-	<sendBrightness>false</sendBrightness>
+	<sendBrightness>1</sendBrightness>
+	<sendRaw>1</sendRaw>
 </settings>
