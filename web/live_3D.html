@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+		<title>Live 3D Stream for Art and Code 3D, thanks to Golan Levin, arturoc, mr.doob, roxlu, binx, joelgethinlewis, all the Art+Code 3D Labbers, openFrameworks Community, Microsoft Research and Microsoft Kinect Team</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<style>
+			body {
+				font-family: Monospace;
+				background-color: #000000;
+				margin: 0px;
+				overflow: hidden;
+			}
+		</style>
+	</head>
+	<body>
+
+		<script src='js/DAT.GUI.min.js'></script>
+		<script src="js/Detector.js"></script>
+		<script src="js/RequestAnimationFrame.js"></script>
+		<script src="js/Stats.js"></script>
+		<script src="js/Three.js"></script>
+
+		<script id="vs" type="x-shader/x-vertex">
+
+			uniform sampler2D map;
+
+			uniform float width;
+			uniform float height;
+			uniform float nearClipping, farClipping;
+
+			uniform float zOffset, pointSize, blurAmount;
+
+			uniform bool useDof;
+			varying float dofSize;
+
+			varying vec2 vUv;
+
+			const float XtoZ = 1.11146; // tan( 1.0144686 / 2.0 ) * 2.0;
+			const float YtoZ = 0.83359; // tan( 0.7898090 / 2.0 ) * 2.0;
+
+			void main() {
+
+				vUv = vec2( position.x / width, 1.0 - ( position.y / height ) );
+				float blurredRaw = texture2D( map, vUv).r;
+				if(blurAmount > 0.0) {
+					blurredRaw *= 4.0;
+					blurredRaw +=
+						texture2D( map, vUv + vec2(-blurAmount, 0.0) ).r +
+						texture2D( map, vUv + vec2(+blurAmount, 0.0) ).r +
+						texture2D( map, vUv + vec2(0.0, -blurAmount) ).r +
+						texture2D( map, vUv + vec2(0.0, +blurAmount) ).r;
+					blurredRaw /= (4.0 + 4.0);
+				}
+				float z = (1.0 - blurredRaw) * (farClipping - nearClipping) + nearClipping;
+				vec4 pos = vec4(
+					- ( position.x / width - 0.5 ) * z * XtoZ,
+					( position.y / height - 0.5 ) * z * YtoZ,
+					z + zOffset,
+					1.0);
+				if(useDof) {
+					dofSize = (1.0 - blurredRaw) * pointSize;
+					gl_PointSize = dofSize;
+				} else {
+					gl_PointSize = pointSize;
+				}
+				gl_Position = projectionMatrix * modelViewMatrix * pos;
+
+			}
+
+		</script>
+
+		<script id="fs" type="x-shader/x-fragment">
+	
+			uniform sampler2D map;
+
+			varying vec2 vUv;
+			varying float dofSize;
+
+			uniform bool useDof;
+			uniform float pointAlpha;
+
+			void main() {
+
+				vec4 color = texture2D( map, vUv );
+				if(useDof) {
+					gl_FragColor = vec4( color.g, color.g, color.g, pointAlpha / (dofSize * dofSize));
+				} else {
+					gl_FragColor = vec4( color.g, color.g, color.g, pointAlpha);
+				}
+			}
+
+		</script>
+
+		<script>
+
+			var container;
+
+			var scene, camera, light, renderer;
+			var geometry, cube, mesh, material;
+			var mouse, center;
+			var stats;
+
+			var canvas, video, texture;
+
+			var videoURL = "http://128.2.103.219/stream_proxy.php?port=8002&mount=artAndCode3D.ogg"; //JGL sez, change the URL to the correct video url of your giss hosted 3D ogg file
+
+			if ( Detector.webgl ) {
+
+				init();
+				animate();
+
+			} else {
+
+				document.body.appendChild( Detector.getWebGLErrorMessage() );
+
+			}
+
+
+			function init() {
+
+				container = document.createElement( 'div' );
+				document.body.appendChild( container );
+
+				stats = new Stats();
+				stats.domElement.style.position = 'absolute';
+				stats.domElement.style.top = '0px';
+				// container.appendChild( stats.domElement );
+
+				scene = new THREE.Scene();
+				center = new THREE.Vector3();
+
+				camera = new THREE.PerspectiveCamera( 50, window.innerWidth / window.innerHeight, 1, 5000 );
+				camera.position.set( 0, 0, -500 );
+				scene.add( camera );
+
+				canvas = document.createElement( 'canvas' );
+				canvas.style.position = 'absolute';
+				canvas.width = 256;
+				canvas.height = 256;
+				// container.appendChild( canvas );
+
+				canvas.context = canvas.getContext( '2d' );
+
+				video = document.createElement( 'video' );
+				video.addEventListener( 'loadedmetadata', function ( event ) {
+
+					texture = new THREE.Texture( canvas );
+
+					var width = 320, height = 240;
+					var nearClipping = 500, farClipping = 1500;
+
+					geometry = new THREE.Geometry();
+
+					for ( var i = 0, l = width * height; i < l; i ++ ) {
+ 
+						var position = new THREE.Vector3();
+						position.x = ( i % width );
+						position.y = Math.floor( i / width );
+
+						geometry.vertices.push( new THREE.Vertex( position ) );
+
+					}
+
+					material = new THREE.ShaderMaterial( {
+
+						uniforms: {
+
+							"map": { type: "t", value: 0, texture: texture },
+							"width": { type: "f", value: width },
+							"height": { type: "f", value: height },
+							"nearClipping": { type: "f", value: nearClipping },
+							"farClipping": { type: "f", value: farClipping },
+
+							"zOffset": { type: "f", value: -500 },
+							"pointSize": { type: "f", value: 2 },
+							"pointAlpha": { type: "f", value: 2 },
+							"blurAmount": { type: "f", value: 0 },
+							"useDof": { type: "i", value: false }
+
+						},
+						vertexShader: document.getElementById( 'vs' ).textContent,
+						fragmentShader: document.getElementById( 'fs' ).textContent
+
+					} );
+
+					mesh = new THREE.ParticleSystem( geometry, material );
+					mesh.position.x = 0;
+					mesh.position.y = 0;
+					scene.add( mesh );
+
+					setInterval( function () {
+
+						if ( video.readyState === video.HAVE_ENOUGH_DATA ) {
+
+							canvas.context.drawImage( video, 0, 0, 256, 256 );
+							texture.needsUpdate = true;
+
+						}
+
+					}, 1000 / 30 ); // is this update rate too fast?
+
+
+					var gui = new DAT.GUI();
+					gui.close();
+					gui.add( material.uniforms.zOffset, 'value' ).name( 'zOffset' ).min( - 1500 ).max( 500 ).step( 1.0 );
+					gui.add( material.uniforms.useDof, 'value' ).name( 'useDof' );
+					gui.add( material.uniforms.pointSize, 'value' ).name( 'pointSize' ).min( 1 ).max( 16 ).step( 1.0 );
+					gui.add( material.uniforms.pointAlpha, 'value' ).name( 'pointAlpha' ).min( 0 ).max( 10 ).step( 0.01 );
+					gui.add( material.uniforms.blurAmount, 'value' ).name( 'blurAmount' ).min( 0 ).max( 0.1 ).step( 0.01 );
+
+
+				}, false );
+				video.src = videoURL;
+				video.play();
+
+				//renderer = new THREE.WebGLRenderer(); (-; JGL
+				renderer = new THREE.AnaglyphWebGLRenderer();
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				container.appendChild( renderer.domElement );
+
+				mouse = new THREE.Vector3( 0, 0, 1 );
+				projector = new THREE.Projector();
+				ray = new THREE.Ray( camera.position );
+
+				document.addEventListener( 'mousemove', onDocumentMouseMove, false );
+
+			}
+
+			function onDocumentMouseMove( event ) {
+
+				mouse.x = ( event.clientX - window.innerWidth / 2 );
+				mouse.y = ( event.clientY - window.innerHeight / 2 );
+
+			}
+
+			function animate() {
+
+				requestAnimationFrame( animate );
+
+				render();
+				stats.update();
+
+			}
+
+			function render() {
+
+				video.width = 256;
+				video.height = 256;
+
+				camera.position.x += ( mouse.x - camera.position.x ) * 0.05;
+				camera.position.y += ( - mouse.y - camera.position.y ) * 0.05;
+				camera.lookAt( center );
+
+				renderer.render( scene, camera );
+
+			}
+
+		</script>
+</body></html>
